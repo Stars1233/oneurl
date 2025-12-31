@@ -105,11 +105,11 @@ export default function LinksPage() {
   if (isLoading) {
     return (
       <div className="p-8">
-        <div className="mb-8 space-y-2">
+        <div className="mb-8 space-y-2 max-w-2xl mx-auto">
           <Skeleton className="h-9 w-48" />
           <Skeleton className="h-5 w-96" />
         </div>
-        <div className="space-y-4">
+        <div className="space-y-4 max-w-2xl mx-auto">
           <Card>
             <CardContent className="p-6">
               <div className="space-y-3">
@@ -133,20 +133,22 @@ export default function LinksPage() {
 
   return (
     <div className="p-8">
-      <div className="mb-8 flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Manage Links</h1>
-          <p className="text-muted-foreground mt-2">
-            Add, edit, and organize your profile links
-          </p>
+      <div className="mb-8 max-w-2xl mx-auto">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Manage Links</h1>
+            <p className="text-muted-foreground mt-2">
+              Add, edit, and organize your profile links
+            </p>
+          </div>
+          <Button onClick={() => setAddDialogOpen(true)}>
+            <Plus />
+            <span>Create New Link</span>
+          </Button>
         </div>
-        <Button onClick={() => setAddDialogOpen(true)}>
-          <Plus />
-          <span>Create New Link</span>
-        </Button>
       </div>
 
-      <div className="space-y-4">
+      <div className="space-y-4 max-w-2xl mx-auto">
         {links.length === 0 ? (
           <Card>
             <CardContent className="p-12">

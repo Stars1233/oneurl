@@ -59,14 +59,14 @@ export default function SettingsClient({
 
   return (
     <div className="p-8">
-      <div className="mb-8">
+      <div className="mb-8 max-w-2xl mx-auto">
         <h1 className="text-3xl font-bold">Settings</h1>
         <p className="text-muted-foreground mt-2">
           Manage your profile and account settings
         </p>
       </div>
 
-      <div className="space-y-6">
+      <div className="space-y-6 max-w-2xl mx-auto">
         <Card>
           <CardHeader>
             <CardTitle>Profile Picture</CardTitle>
