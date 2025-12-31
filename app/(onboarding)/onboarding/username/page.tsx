@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { CheckCircle2, Loader2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { authClient } from "@/lib/auth-client";
+import { Form } from "@/components/ui/form";
+import { Field, FieldLabel, FieldControl, FieldError, FieldDescription } from "@/components/ui/field";
+import { InputGroup, InputGroupAddon, InputGroupText, InputGroupInput } from "@/components/ui/input-group";
 import { usernameSchema } from "@/lib/validations/schemas";
+import { toastSuccess, toastError } from "@/lib/toast";
 
 export default function UsernamePage() {
   const router = useRouter();
@@ -14,18 +16,24 @@ export default function UsernamePage() {
   const [error, setError] = useState("");
   const [isChecking, setIsChecking] = useState(false);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
+  const debounceTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  const checkAvailability = async (value: string) => {
+  const checkAvailability = useCallback(async (value: string) => {
     if (!value) {
       setIsAvailable(null);
+      setError("");
+      setIsChecking(false);
       return;
     }
 
+    let validationError = "";
     try {
       usernameSchema.parse(value);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Invalid username");
+      validationError = e instanceof Error ? e.message : "Invalid username";
+      setError(validationError);
       setIsAvailable(false);
+      setIsChecking(false);
       return;
     }
 
@@ -53,7 +61,29 @@ export default function UsernamePage() {
     } finally {
       setIsChecking(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (debounceTimerRef.current) {
+      clearTimeout(debounceTimerRef.current);
+    }
+
+    if (username) {
+      debounceTimerRef.current = setTimeout(() => {
+        checkAvailability(username);
+      }, 500);
+    } else {
+      setIsAvailable(null);
+      setError("");
+      setIsChecking(false);
+    }
+
+    return () => {
+      if (debounceTimerRef.current) {
+        clearTimeout(debounceTimerRef.current);
+      }
+    };
+  }, [username, checkAvailability]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -67,13 +97,18 @@ export default function UsernamePage() {
       });
 
       if (res.ok) {
+        toastSuccess("Username set", `Your username @${username} has been set successfully`);
         router.push("/onboarding/avatar");
       } else {
         const data = await res.json();
-        setError(data.error || "Failed to set username");
+        const errorMessage = data.error || "Failed to set username";
+        setError(errorMessage);
+        toastError("Failed to set username", errorMessage);
       }
     } catch {
-      setError("Failed to set username");
+      const errorMessage = "Failed to set username";
+      setError(errorMessage);
+      toastError("Error", errorMessage);
     }
   };
 
@@ -87,45 +122,72 @@ export default function UsernamePage() {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                oneurl.com/
-              </span>
-              <Input
-                id="username"
-                value={username}
-                onChange={(e) => {
-                  const value = e.target.value.toLowerCase();
-                  setUsername(value);
-                  checkAvailability(value);
-                }}
-                className="pl-[120px]"
-                placeholder="username"
-                aria-invalid={error ? "true" : undefined}
-              />
+        <Form onSubmit={handleSubmit}>
+          <Field>
+            <FieldLabel htmlFor="username">Username</FieldLabel>
+            <FieldDescription>
+              Choose a unique username for your profile URL
+            </FieldDescription>
+            <FieldControl
+              render={(props) => (
+                <InputGroup className="transition-all duration-200">
+                  <InputGroupAddon align="inline-start">
+                    <InputGroupText>oneurl.com/</InputGroupText>
+                  </InputGroupAddon>
+                  <InputGroupInput
+                    {...props}
+                    id="username"
+                    value={username}
+                    onChange={(e) => {
+                      const value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+                      setUsername(value);
+                    }}
+                    placeholder="username"
+                    aria-invalid={error ? "true" : undefined}
+                    autoFocus
+                  />
+                  <InputGroupAddon align="inline-end">
+                    <div className="flex items-center">
+                      {isChecking && (
+                        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground transition-opacity duration-200" />
+                      )}
+                      {!isChecking && isAvailable === true && (
+                        <CheckCircle2 className="h-4 w-4 text-green-600 transition-opacity duration-200" />
+                      )}
+                      {!isChecking && isAvailable === false && error && (
+                        <XCircle className="h-4 w-4 text-destructive transition-opacity duration-200" />
+                      )}
+                    </div>
+                  </InputGroupAddon>
+                </InputGroup>
+              )}
+            />
+            <div className="min-h-[20px] transition-all duration-200">
+              {error && <FieldError>{error}</FieldError>}
+              {!error && isAvailable === true && (
+                <FieldDescription className="text-green-600 flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  Username is available!
+                </FieldDescription>
+              )}
             </div>
-            {error && (
-              <p className="text-sm text-destructive">{error}</p>
-            )}
-            {isAvailable === true && !error && (
-              <p className="text-sm text-green-600">Username is available!</p>
-            )}
-            {isChecking && (
-              <p className="text-sm text-muted-foreground">Checking...</p>
-            )}
-          </div>
+          </Field>
 
           <Button
             type="submit"
             className="w-full"
             disabled={!isAvailable || isChecking}
           >
-            Continue
+            {isChecking ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Checking...</span>
+              </>
+            ) : (
+              "Continue"
+            )}
           </Button>
-        </form>
+        </Form>
       </div>
     </div>
   );

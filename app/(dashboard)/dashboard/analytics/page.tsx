@@ -1,7 +1,15 @@
+import { BarChart3 } from "lucide-react";
 import { requireAuth } from "@/lib/auth-guard";
 import { analyticsService } from "@/lib/services/analytics.service";
 import { db } from "@/lib/db";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyMedia,
+} from "@/components/ui/empty";
 
 export default async function AnalyticsPage() {
   const session = await requireAuth();
@@ -61,7 +69,17 @@ export default async function AnalyticsPage() {
                 })}
               </div>
             ) : (
-              <p className="text-sm text-muted-foreground">No data yet</p>
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <BarChart3 />
+                  </EmptyMedia>
+                  <EmptyTitle>No data yet</EmptyTitle>
+                  <EmptyDescription>
+                    Start sharing your links to see analytics data here.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             )}
           </CardContent>
         </Card>

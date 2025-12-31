@@ -7,7 +7,7 @@ import Image from "next/image";
 
 const steps = [
   { path: "/onboarding/username", label: "Username", step: 1 },
-  { path: "/onboarding/avatar", label: "Avatar", step: 2 },
+  { path: "/onboarding/avatar", label: "Profile", step: 2 },
   { path: "/onboarding/links", label: "Links", step: 3 },
   { path: "/onboarding/preview", label: "Preview", step: 4 },
 ];
@@ -19,7 +19,6 @@ export default function OnboardingLayout({
 }) {
   const pathname = usePathname();
   const currentStep = steps.findIndex((step) => step.path === pathname);
-  const currentStepNumber = currentStep >= 0 ? currentStep + 1 : 1;
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -105,7 +104,7 @@ export default function OnboardingLayout({
         </div>
       </div>
 
-      <div className="flex-1">{children}</div>
+      <div className="flex flex-1">{children}</div>
     </div>
   );
 }

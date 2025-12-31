@@ -8,8 +8,9 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { Form } from "@/components/ui/form";
-import { Field, FieldLabel, FieldControl } from "@/components/ui/field";
+import { Field, FieldLabel, FieldControl, FieldDescription } from "@/components/ui/field";
 import { Fieldset } from "@/components/ui/fieldset";
+import { InputGroup, InputGroupAddon, InputGroupText, InputGroupInput } from "@/components/ui/input-group";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -70,42 +71,55 @@ export default function SettingsClient({
           <CardHeader>
             <CardTitle>Profile Picture</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex flex-col items-center gap-4">
-              <Avatar className="h-32 w-32 border-2">
-                {avatarUrl && <AvatarImage src={avatarUrl} alt="Profile picture" />}
-                <AvatarFallback>
-                  <svg
-                    className="h-12 w-12 text-muted-foreground"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
-                    />
-                  </svg>
-                </AvatarFallback>
-              </Avatar>
-              <UploadButton<OurFileRouter, "avatarUploader">
-                endpoint="avatarUploader"
-                onUploadBegin={() => setIsUploading(true)}
-                onClientUploadComplete={handleUploadComplete}
-                onUploadError={() => {
-                  setIsUploading(false);
-                }}
-                content={{
-                  button: ({ ready }: { ready: boolean }) => (
-                    <Button type="button" disabled={!ready || isUploading || updateAvatar.isPending}>
-                      {isUploading || updateAvatar.isPending ? "Uploading..." : "Change Avatar"}
-                    </Button>
-                  ),
-                }}
-              />
-            </div>
+          <CardContent>
+            <Form>
+              <Field>
+                <FieldLabel>Profile Picture</FieldLabel>
+                <FieldDescription>
+                  Upload an image file (max 4MB). This will be displayed on your profile page.
+                </FieldDescription>
+                <FieldControl
+                  render={() => (
+                    <div className="flex flex-col items-center gap-4">
+                      <Avatar className="h-32 w-32 border-2 transition-all duration-200">
+                        {avatarUrl && <AvatarImage src={avatarUrl} alt="Profile picture" />}
+                        <AvatarFallback>
+                          <svg
+                            className="h-12 w-12 text-muted-foreground"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                          >
+                            <path
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                              strokeWidth={2}
+                              d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                            />
+                          </svg>
+                        </AvatarFallback>
+                      </Avatar>
+                      <UploadButton<OurFileRouter, "avatarUploader">
+                        endpoint="avatarUploader"
+                        onUploadBegin={() => setIsUploading(true)}
+                        onClientUploadComplete={handleUploadComplete}
+                        onUploadError={() => {
+                          setIsUploading(false);
+                        }}
+                        content={{
+                          button: ({ ready }: { ready: boolean }) => (
+                            <Button type="button" disabled={!ready || isUploading || updateAvatar.isPending}>
+                              {isUploading || updateAvatar.isPending ? "Uploading..." : "Change Avatar"}
+                            </Button>
+                          ),
+                        }}
+                      />
+                      <p className="text-xs text-muted-foreground">Image (4MB max)</p>
+                    </div>
+                  )}
+                />
+              </Field>
+            </Form>
           </CardContent>
         </Card>
 
@@ -118,6 +132,9 @@ export default function SettingsClient({
               <Fieldset>
                 <Field>
                   <FieldLabel htmlFor="name">Name</FieldLabel>
+                  <FieldDescription>
+                    Your display name that will be shown on your profile
+                  </FieldDescription>
                   <FieldControl
                     render={(props) => (
                       <Input
@@ -132,20 +149,34 @@ export default function SettingsClient({
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="username">Username</FieldLabel>
+                  <FieldDescription>
+                    Your unique profile URL will be: oneurl.com/{username || "username"}
+                  </FieldDescription>
                   <FieldControl
                     render={(props) => (
-                      <Input
-                        {...props}
-                        id="username"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                        disabled={updateProfile.isPending}
-                      />
+                      <InputGroup className="transition-all duration-200">
+                        <InputGroupAddon align="inline-start">
+                          <InputGroupText>oneurl.com/</InputGroupText>
+                        </InputGroupAddon>
+                        <InputGroupInput
+                          {...props}
+                          id="username"
+                          value={username}
+                          onChange={(e) => {
+                            const value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, "");
+                            setUsername(value);
+                          }}
+                          disabled={updateProfile.isPending}
+                        />
+                      </InputGroup>
                     )}
                   />
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="bio">Bio</FieldLabel>
+                  <FieldDescription>
+                    A short description about yourself (optional)
+                  </FieldDescription>
                   <FieldControl
                     render={(props) => (
                       <Textarea

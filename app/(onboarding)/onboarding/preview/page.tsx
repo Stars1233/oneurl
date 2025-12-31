@@ -70,7 +70,7 @@ export default async function PreviewPage() {
         </div>
       </div>
 
-      <PreviewClient profile={profile} />
+      <PreviewClient />
     </div>
   );
 }

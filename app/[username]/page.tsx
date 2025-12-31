@@ -1,7 +1,15 @@
 import { notFound } from "next/navigation";
+import { Link2 } from "lucide-react";
 import { profileService } from "@/lib/services/profile.service";
 import type { Metadata } from "next";
 import Image from "next/image";
+import {
+  Empty,
+  EmptyHeader,
+  EmptyTitle,
+  EmptyDescription,
+  EmptyMedia,
+} from "@/components/ui/empty";
 import LinkClickTracker from "./link-click-tracker";
 import { getAvatarUrl } from "@/lib/utils";
 
@@ -94,8 +102,18 @@ export default async function PublicProfilePage({ params }: Props) {
           )}
 
           {links.length === 0 && (
-            <div className="mt-8 text-center text-sm text-muted-foreground">
-              No links available yet.
+            <div className="mt-8">
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <Link2 />
+                  </EmptyMedia>
+                  <EmptyTitle>No links available yet</EmptyTitle>
+                  <EmptyDescription>
+                    This profile doesn&apos;t have any links to display.
+                  </EmptyDescription>
+                </EmptyHeader>
+              </Empty>
             </div>
           )}
         </div>

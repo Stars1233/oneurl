@@ -11,5 +11,11 @@ export default async function AvatarPage() {
 
   const googleImageUrl = getAvatarUrl(user || { image: null, avatarUrl: null });
 
-  return <AvatarClient initialImageUrl={googleImageUrl} />;
+  return (
+    <AvatarClient
+      initialImageUrl={googleImageUrl}
+      initialName={user?.name || ""}
+      initialBio={user?.bio || ""}
+    />
+  );
 }

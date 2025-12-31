@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
+import { toastSuccess, toastError } from "@/lib/toast";
 
-export default function PreviewClient({ profile }: { profile: any }) {
+export default function PreviewClient() {
   const router = useRouter();
   const [isPublishing, setIsPublishing] = useState(false);
 
@@ -16,9 +17,14 @@ export default function PreviewClient({ profile }: { profile: any }) {
       });
 
       if (res.ok) {
+        toastSuccess("Profile published", "Your profile is now live!");
         router.push("/dashboard");
+      } else {
+        const data = await res.json();
+        toastError("Publish failed", data.error || "Failed to publish your profile");
       }
     } catch {
+      toastError("Error", "Failed to publish your profile");
     } finally {
       setIsPublishing(false);
     }
