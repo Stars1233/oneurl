@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type * as React from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   DndContext,
@@ -22,6 +23,12 @@ import { Link2, Plus, RefreshCw, Link2Icon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipPopup,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 import {
   Empty,
   EmptyHeader,
@@ -257,21 +264,37 @@ export function DashboardClient({ initialProfile }: DashboardClientProps) {
                 Manage your icon links and main links
               </p>
             </div>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleRefresh}
-                disabled={isLoadingCounts || isRefreshing}
-              >
-                <RefreshCw className={`h-4 w-4 ${isLoadingCounts || isRefreshing ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
-              <Button onClick={() => setAddDialogOpen(true)} size="sm">
-                <Plus className="h-4 w-4" />
-                <span>Add Link</span>
-              </Button>
-            </div>
+            <TooltipProvider>
+              <div className="flex gap-2">
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleRefresh}
+                        disabled={isLoadingCounts || isRefreshing}
+                      >
+                        <RefreshCw className={`h-4 w-4 ${isLoadingCounts || isRefreshing ? "animate-spin" : ""}`} />
+                        Refresh
+                      </Button> as React.ReactElement
+                    }
+                  />
+                  <TooltipPopup>Refresh analytics data</TooltipPopup>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button onClick={() => setAddDialogOpen(true)} size="sm">
+                        <Plus className="h-4 w-4" />
+                        <span>Add Link</span>
+                      </Button> as React.ReactElement
+                    }
+                  />
+                  <TooltipPopup>Add a new link to your profile</TooltipPopup>
+                </Tooltip>
+              </div>
+            </TooltipProvider>
           </div>
 
           {links.length === 0 ? (

@@ -1,7 +1,14 @@
 "use client";
 
+import type * as React from "react";
 import Image from "next/image";
 import type { Link } from "@/lib/hooks/use-links";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipPopup,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 interface MainLinkProps {
   link: Link;
@@ -14,7 +21,7 @@ export function MainLink({ link, onClick, showDescription = false, description }
   const displayImageUrl = link.previewImageUrl;
   const displayDescription = link.previewDescription || description;
 
-  return (
+  const linkElement = (
     <a
       href={link.url}
       target="_blank"
@@ -55,6 +62,23 @@ export function MainLink({ link, onClick, showDescription = false, description }
         </div>
       </div>
     </a>
+  );
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger render={linkElement as React.ReactElement} />
+        <TooltipPopup>
+          <div className="space-y-1">
+            <div className="font-medium">{link.title}</div>
+            <div className="text-xs opacity-80">{link.url}</div>
+            {displayDescription && (
+              <div className="text-xs opacity-70 max-w-xs">{displayDescription}</div>
+            )}
+          </div>
+        </TooltipPopup>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 

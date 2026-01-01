@@ -1,6 +1,13 @@
 "use client";
 
+import type * as React from "react";
 import type { Link } from "@/lib/hooks/use-links";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipPopup,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 interface IconLinkProps {
   link: Link;
@@ -118,13 +125,15 @@ export function IconLink({ link, onClick }: IconLinkProps) {
     }
   };
 
-  return (
+  const tooltipText = link.title || linkTitle;
+
+  const linkElement = (
     <a
       href={link.url}
       target="_blank"
       rel="noopener noreferrer"
       onClick={handleClick}
-      aria-label={link.title || linkTitle}
+      aria-label={tooltipText}
       className="inline-flex items-center justify-center text-white rounded-xl transition-all hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-100 focus:ring-zinc-400"
       style={{
         background: colors.bg,
@@ -150,6 +159,15 @@ export function IconLink({ link, onClick }: IconLinkProps) {
         <span className="text-lg leading-none">{link.icon}</span>
       )}
     </a>
+  );
+
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger render={linkElement as React.ReactElement} />
+        <TooltipPopup>{tooltipText}</TooltipPopup>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 

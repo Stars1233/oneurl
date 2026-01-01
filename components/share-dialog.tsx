@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type * as React from "react";
 import { Copy, Check, ExternalLink, QrCode, Share2 } from "lucide-react";
 import {
   Dialog,
@@ -12,6 +13,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { QRCodeDialog } from "@/components/qr-code-dialog";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipPopup,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 import { toastSuccess } from "@/lib/toast";
 
 interface ShareDialogProps {
@@ -117,17 +124,28 @@ export function ShareDialog({
               <span className="flex-1 font-mono text-sm text-foreground truncate">
                 {profileUrl}
               </span>
-              <button
-                onClick={handleCopy}
-                className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent transition-colors shrink-0"
-                aria-label="Copy link"
-              >
-                {copied ? (
-                  <Check className="h-4 w-4 text-primary" />
-                ) : (
-                  <Copy className="h-4 w-4 text-muted-foreground" />
-                )}
-              </button>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <button
+                        onClick={handleCopy}
+                        className="flex h-8 w-8 items-center justify-center rounded-md hover:bg-accent transition-colors shrink-0"
+                        aria-label="Copy link"
+                      >
+                        {copied ? (
+                          <Check className="h-4 w-4 text-primary" />
+                        ) : (
+                          <Copy className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </button> as React.ReactElement
+                    }
+                  />
+                  <TooltipPopup>
+                    {copied ? "Copied!" : "Copy link"}
+                  </TooltipPopup>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
 

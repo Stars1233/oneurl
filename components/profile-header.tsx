@@ -1,10 +1,17 @@
 "use client";
 
+import type * as React from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ShareDialog } from "@/components/share-dialog";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipPopup,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 import { useState } from "react";
 
 interface ProfileHeaderProps {
@@ -29,32 +36,48 @@ export function ProfileHeader({
   return (
     <>
       {/* Top buttons: Logo (left) and Share (right) */}
-      <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10 pointer-events-none">
-        {/* Logo/Home Button */}
-        <Link
-          href="/"
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors pointer-events-auto"
-          aria-label="Go to OneURL homepage"
-        >
-          <Image
-            src="/logo.png"
-            alt="OneURL"
-            width={24}
-            height={24}
-            className="h-6 w-6"
-            priority
-          />
-        </Link>
+      <TooltipProvider>
+        <div className="absolute top-4 left-4 right-4 flex items-center justify-between z-10 pointer-events-none">
+          {/* Logo/Home Button */}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Link
+                  href="/"
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors pointer-events-auto"
+                  aria-label="Go to OneURL homepage"
+                >
+                  <Image
+                    src="/logo.png"
+                    alt="OneURL"
+                    width={24}
+                    height={24}
+                    className="h-6 w-6"
+                    priority
+                  />
+                </Link> as React.ReactElement
+              }
+            />
+            <TooltipPopup>Go to OneURL homepage</TooltipPopup>
+          </Tooltip>
 
-        {/* Share Button */}
-        <button
-          onClick={() => setShareDialogOpen(true)}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors pointer-events-auto"
-          aria-label="Share profile"
-        >
-          <Share2 className="h-5 w-5 text-foreground" />
-        </button>
-      </div>
+          {/* Share Button */}
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <button
+                  onClick={() => setShareDialogOpen(true)}
+                  className="flex h-10 w-10 items-center justify-center rounded-full bg-background/80 backdrop-blur-sm border shadow-sm hover:bg-background transition-colors pointer-events-auto"
+                  aria-label="Share profile"
+                >
+                  <Share2 className="h-5 w-5 text-foreground" />
+                </button> as React.ReactElement
+              }
+            />
+            <TooltipPopup>Share profile</TooltipPopup>
+          </Tooltip>
+        </div>
+      </TooltipProvider>
 
       {/* CTA Button - positioned at bottom center */}
       <div className="absolute bottom-4 left-4 right-4 flex justify-center z-10 pointer-events-none">

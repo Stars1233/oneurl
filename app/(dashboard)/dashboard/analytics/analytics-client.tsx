@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   LineChart,
@@ -13,12 +14,18 @@ import {
   XAxis,
   YAxis,
   CartesianGrid,
-  Tooltip,
+  Tooltip as RechartsTooltip,
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipPopup,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 import { X, Globe, Monitor, Smartphone, Tablet, TrendingUp, Users, MousePointerClick, RefreshCw } from "lucide-react";
 import {
   Empty,
@@ -232,44 +239,59 @@ export function AnalyticsClient({
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-end gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleRefresh}
-          disabled={isLoadingStats || isRefreshing}
-        >
-          <RefreshCw className={`h-4 w-4 ${isLoadingStats || isRefreshing ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
-      </div>
+    <TooltipProvider>
+      <div className="space-y-6">
+        <div className="flex items-center justify-end gap-2">
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRefresh}
+                  disabled={isLoadingStats || isRefreshing}
+                >
+                  <RefreshCw className={`h-4 w-4 ${isLoadingStats || isRefreshing ? "animate-spin" : ""}`} />
+                  Refresh
+                </Button> as React.ReactElement
+              }
+            />
+            <TooltipPopup>Refresh analytics data</TooltipPopup>
+          </Tooltip>
+        </div>
 
-      {selectedLinkId && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Viewing analytics for
-                </p>
-                <p className="text-lg font-semibold">{selectedLink?.title}</p>
-                <p className="text-sm text-muted-foreground truncate max-w-md">
-                  {selectedLink?.url}
-                </p>
+        {selectedLinkId && (
+          <Card className="border-primary/20 bg-primary/5">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">
+                    Viewing analytics for
+                  </p>
+                  <p className="text-lg font-semibold">{selectedLink?.title}</p>
+                  <p className="text-sm text-muted-foreground truncate max-w-md">
+                    {selectedLink?.url}
+                  </p>
+                </div>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedLinkId(null)}
+                      >
+                        <X className="h-4 w-4" />
+                        View All Links
+                      </Button> as React.ReactElement
+                    }
+                  />
+                  <TooltipPopup>View analytics for all links</TooltipPopup>
+                </Tooltip>
               </div>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSelectedLinkId(null)}
-              >
-                <X className="h-4 w-4" />
-                View All Links
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+            </CardContent>
+          </Card>
+        )}
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
@@ -343,7 +365,7 @@ export function AnalyticsClient({
                   className="text-xs"
                   tick={{ fill: "hsl(var(--muted-foreground))" }}
                 />
-                <Tooltip
+                <RechartsTooltip
                   contentStyle={{
                     backgroundColor: "hsl(var(--background))",
                     border: "1px solid hsl(var(--border))",
@@ -641,7 +663,7 @@ export function AnalyticsClient({
                           />
                         ))}
                       </Pie>
-                      <Tooltip
+                      <RechartsTooltip
                         contentStyle={{
                           backgroundColor: "hsl(var(--background))",
                           border: "1px solid hsl(var(--border))",
@@ -695,7 +717,7 @@ export function AnalyticsClient({
                           />
                         ))}
                       </Pie>
-                      <Tooltip
+                      <RechartsTooltip
                         contentStyle={{
                           backgroundColor: "hsl(var(--background))",
                           border: "1px solid hsl(var(--border))",
@@ -791,7 +813,7 @@ export function AnalyticsClient({
                       className="text-xs"
                       tick={{ fill: "hsl(var(--muted-foreground))" }}
                     />
-                    <Tooltip
+                    <RechartsTooltip
                       contentStyle={{
                         backgroundColor: "hsl(var(--background))",
                         border: "1px solid hsl(var(--border))",
@@ -810,6 +832,7 @@ export function AnalyticsClient({
           )}
         </>
       )}
-    </div>
+      </div>
+    </TooltipProvider>
   );
 }

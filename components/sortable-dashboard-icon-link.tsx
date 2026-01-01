@@ -1,11 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import type * as React from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Link } from "@/lib/hooks/use-links";
 import { Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipPopup,
+  TooltipProvider,
+} from "@/components/ui/tooltip";
 
 interface SortableDashboardIconLinkProps {
   link: Link;
@@ -146,56 +153,74 @@ export function SortableDashboardIconLink({
     onEdit(link);
   };
 
-  return (
+  const tooltipText = link.title || linkTitle;
+
+  const iconElement = (
     <div
-      ref={setNodeRef}
-      style={style}
-      className={`relative group ${isDeleting || isToggling ? "opacity-60" : ""} ${isDragging ? "z-50" : ""}`}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
+      {...attributes}
+      {...listeners}
+      aria-label={tooltipText}
+      className="inline-flex items-center justify-center text-white rounded-xl transition-all hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-100 focus:ring-zinc-400 cursor-grab active:cursor-grabbing"
+      style={{
+        background: colors.bg,
+        border: `1px solid ${colors.border}`,
+        width: "44px",
+        height: "44px",
+      }}
     >
-      <div
-        {...attributes}
-        {...listeners}
-        aria-label={link.title || linkTitle}
-        className="inline-flex items-center justify-center text-white rounded-xl transition-all hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-100 focus:ring-zinc-400 cursor-grab active:cursor-grabbing"
-        style={{
-          background: colors.bg,
-          border: `1px solid ${colors.border}`,
-          width: "44px",
-          height: "44px",
-        }}
-      >
-        {svgPath ? (
-          <svg
-            role="img"
-            viewBox="0 0 24 24"
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            fill="currentColor"
-            className="shrink-0 pointer-events-none"
-          >
-            <title>{linkTitle}</title>
-            {svgPath}
-          </svg>
-        ) : (
-          <span className="text-lg leading-none pointer-events-none">{link.icon}</span>
-        )}
-      </div>
-      {isHovered && (
-        <Button
-          type="button"
-          size="sm"
-          variant="secondary"
-          className="absolute -top-1 -right-1 h-5 w-5 p-0 rounded-full shadow-sm z-10"
-          onClick={handleEditClick}
-          aria-label={`Edit ${link.title || linkTitle}`}
+      {svgPath ? (
+        <svg
+          role="img"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          fill="currentColor"
+          className="shrink-0 pointer-events-none"
         >
-          <Pencil className="h-3 w-3" />
-        </Button>
+          <title>{linkTitle}</title>
+          {svgPath}
+        </svg>
+      ) : (
+        <span className="text-lg leading-none pointer-events-none">{link.icon}</span>
       )}
     </div>
+  );
+
+  return (
+    <TooltipProvider>
+      <div
+        ref={setNodeRef}
+        style={style}
+        className={`relative group ${isDeleting || isToggling ? "opacity-60" : ""} ${isDragging ? "z-50" : ""}`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
+        <Tooltip>
+          <TooltipTrigger render={iconElement as React.ReactElement} />
+          <TooltipPopup>{tooltipText}</TooltipPopup>
+        </Tooltip>
+        {isHovered && (
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="absolute -top-1 -right-1 h-5 w-5 p-0 rounded-full shadow-sm z-10"
+                  onClick={handleEditClick}
+                  aria-label={`Edit ${tooltipText}`}
+                >
+                  <Pencil className="h-3 w-3" />
+                </Button> as React.ReactElement
+              }
+            />
+            <TooltipPopup>Edit {tooltipText}</TooltipPopup>
+          </Tooltip>
+        )}
+      </div>
+    </TooltipProvider>
   );
 }
 
