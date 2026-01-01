@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
-import urlMetadata from "url-metadata";
 import { getFallbackPreviewImage } from "@/lib/utils/link-preview-image";
+
+const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
@@ -29,50 +30,49 @@ export async function GET(req: Request) {
   }
 
   try {
-
-    const metadata = await urlMetadata(validUrl, {
-      timeout: 10000,
-      requestHeaders: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-      },
-    });
-
-    let favicon: string | null = null;
-    if (metadata.favicons && Array.isArray(metadata.favicons) && metadata.favicons.length > 0) {
-      const firstFavicon = metadata.favicons[0];
-      if (typeof firstFavicon === "string") {
-        favicon = firstFavicon;
-      } else if (firstFavicon && typeof firstFavicon === "object" && "href" in firstFavicon) {
-        favicon = firstFavicon.href as string;
+    const response = await fetch(
+      `${BACKEND_URL}/api/preview?url=${encodeURIComponent(validUrl)}`,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+        next: { revalidate: 0 },
       }
+    );
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      
+      if (response.status === 403 || response.status === 408 || response.status === 404) {
+        const fallback = await getFallbackPreviewImage();
+        return NextResponse.json({
+          title: null,
+          description: null,
+          image: fallback,
+          logo: null,
+          url: validUrl,
+        });
+      }
+
+      throw new Error(errorData.error || `Backend returned ${response.status}`);
     }
 
-    let image = metadata["og:image"] || metadata.image || null;
+    const result = await response.json();
+    const metadata = result.data;
+
+    let image = metadata.image;
     if (!image) {
-      const fallback = await getFallbackPreviewImage();
-      image = fallback;
+      image = await getFallbackPreviewImage();
     }
 
     return NextResponse.json({
-      title: metadata["og:title"] || metadata.title || null,
-      description: metadata["og:description"] || metadata.description || null,
+      title: metadata.title,
+      description: metadata.description,
       image,
-      logo: metadata["og:logo"] || metadata.logo || favicon || null,
-      url: validUrl,
+      logo: metadata.logo,
+      url: metadata.url,
     });
   } catch (error) {
-    if (error instanceof Error && error.message.includes("timeout")) {
-      const fallback = await getFallbackPreviewImage();
-      return NextResponse.json({
-        title: null,
-        description: null,
-        image: fallback,
-        logo: null,
-        url: validUrl,
-      });
-    }
-
     console.error("Error fetching link preview:", error);
     const fallback = await getFallbackPreviewImage();
     return NextResponse.json({

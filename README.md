@@ -17,6 +17,7 @@
 ## Tech Stack
 
 - **Framework:** Next.js 16 (App Router)
+- **Backend:** Express.js (separate service for link previews)
 - **Language:** TypeScript
 - **Database:** PostgreSQL with Prisma ORM
 - **Authentication:** Better Auth
@@ -70,6 +71,11 @@ GOOGLE_CLIENT_SECRET="your-google-client-secret"
 
 # UploadThing - for file uploads
 UPLOADTHING_TOKEN="your-uploadthing-token"
+
+# Backend Service
+# Development: http://localhost:3001
+# Production: https://api.oneurl.live
+BACKEND_URL="http://localhost:3001"
 ```
 
 > **Note:** UploadThing is optional. If not configured, you can still use the app but avatar uploads won't work. Sign up at [uploadthing.com](https://uploadthing.com) to get your credentials.
@@ -84,15 +90,41 @@ bun prisma generate
 bun prisma migrate dev
 ```
 
-### 5. Run the Development Server
+### 5. Set Up Backend Service
 
-```bash
-bun run dev
-# or
-npm run dev
+The backend service handles link preview metadata fetching. Create a `.env` file in the `backend` directory:
+
+```env
+PORT=3001
+FRONTEND_URL=http://localhost:3000
+NODE_ENV=development
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+Install backend dependencies:
+
+```bash
+cd backend
+bun install
+cd ..
+```
+
+### 6. Run the Development Servers
+
+**Option 1: Run both services together**
+```bash
+bun run dev:all
+```
+
+**Option 2: Run separately**
+```bash
+# Terminal 1 - Frontend
+bun run dev
+
+# Terminal 2 - Backend
+bun run dev:backend
+```
+
+Open [http://localhost:3000](http://localhost:3000) in your browser. The backend service runs on [http://localhost:3001](http://localhost:3001).
 
 ## Project Structure
 
@@ -104,6 +136,12 @@ oneurl/
 │   ├── (onboarding)/      # Onboarding flow
 │   ├── [username]/        # Public profile pages
 │   └── api/               # API routes
+├── backend/               # Express backend service
+│   ├── src/
+│   │   ├── routes/        # API routes
+│   │   ├── middleware/    # Rate limiting, validation, error handling
+│   │   └── utils/         # Metadata fetching utilities
+│   └── package.json       # Backend dependencies
 ├── components/            # React components
 │   ├── landing/           # Landing page components
 │   └── ui/                # UI component library
@@ -119,10 +157,19 @@ oneurl/
 
 ## Available Scripts
 
-- `bun run dev` - Start development server
+**Frontend:**
+- `bun run dev` - Start Next.js development server
 - `bun run build` - Build for production
 - `bun run start` - Start production server
 - `bun run lint` - Run ESLint
+
+**Backend:**
+- `bun run dev:backend` - Start backend development server
+- `bun run build:backend` - Build backend for production
+- `bun run start:backend` - Start backend production server
+
+**Both:**
+- `bun run dev:all` - Run both frontend and backend in development mode
 
 ## Additional Setup
 
@@ -184,12 +231,22 @@ Update your `DATABASE_URL` in the deployment environment variables.
 
 ### Production Checklist
 
+**Frontend:**
 - [ ] Set up production database
-- [ ] Configure Google OAuth with production redirect URI
-- [ ] Set `BETTER_AUTH_URL` to your production domain
+- [ ] Configure Google OAuth with production redirect URI (`https://oneurl.live/api/auth/callback/google`)
+- [ ] Set `BETTER_AUTH_URL` to `https://oneurl.live`
+- [ ] Set `BACKEND_URL` to `https://api.oneurl.live`
 - [ ] Configure UploadThing with production domain (if using)
 - [ ] Update `next.config.ts` image domains if needed
 - [ ] Test all features in production environment
+
+**Backend:**
+- [ ] Deploy backend service (Railway, Render, Fly.io, etc.)
+- [ ] Set `FRONTEND_URL` to `https://oneurl.live`
+- [ ] Set `NODE_ENV` to `production`
+- [ ] Configure DNS: Point `api.oneurl.live` to backend service
+- [ ] Test backend health endpoint: `https://api.oneurl.live/health`
+- [ ] Verify CORS allows requests from `oneurl.live`
 
 ## Contributing
 

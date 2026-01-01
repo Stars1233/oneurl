@@ -3,7 +3,7 @@ import { requireAuth } from "@/lib/auth-guard";
 import { linkService } from "@/lib/services/link.service";
 import { linkUpdateSchema } from "@/lib/validations/schemas";
 import { db } from "@/lib/db";
-import urlMetadata from "url-metadata";
+import { fetchMetadataFromBackend } from "@/lib/utils/backend-client";
 import { fetchAndUploadLinkPreviewImage, deleteLinkPreviewImage, getFallbackPreviewImage } from "@/lib/utils/link-preview-image";
 
 export async function PATCH(
@@ -34,17 +34,11 @@ export async function PATCH(
       const oldPreviewImageUrl = (link as { previewImageUrl?: string | null }).previewImageUrl;
       
       try {
-        const metadata = await urlMetadata(data.url, {
-          timeout: 10000,
-          requestHeaders: {
-            "User-Agent":
-              "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-          },
-        });
+        const metadata = await fetchMetadataFromBackend(data.url);
 
-        data.previewDescription = metadata["og:description"] || metadata.description || null;
+        data.previewDescription = metadata.description;
 
-        const imageUrl = metadata["og:image"] || metadata.image;
+        const imageUrl = metadata.image;
         if (imageUrl && typeof imageUrl === "string") {
           const newPreviewImageUrl = await fetchAndUploadLinkPreviewImage(imageUrl, link.id, data.url);
           if (newPreviewImageUrl) {
