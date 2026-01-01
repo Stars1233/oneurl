@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
-import { requireAuth } from "@/lib/auth-guard";
+import { auth } from "@/lib/auth";
+import { headers } from "next/headers";
 import { profileService } from "@/lib/services/profile.service";
-import { usernameSchema } from "@/lib/validations/schemas";
 
 export async function POST(req: Request) {
   try {
-    const session = await requireAuth();
+    const session = await auth.api.getSession({ headers: await headers() });
     const { username } = await req.json();
 
     if (!username) {
@@ -17,18 +17,14 @@ export async function POST(req: Request) {
 
     const available = await profileService.checkUsernameAvailable(
       username,
-      session.user.id
+      session?.user?.id
     );
 
     return NextResponse.json({ available });
   } catch (error) {
-    if (error instanceof Error && error.message.includes("redirect")) {
-      throw error;
-    }
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Invalid username" },
       { status: 400 }
     );
   }
 }
-

@@ -64,6 +64,17 @@ export default function UsernamePage() {
   }, []);
 
   useEffect(() => {
+    // Check for claimed username from landing page
+    const claimedUsername = localStorage.getItem("claimedUsername");
+    if (claimedUsername) {
+      setUsername(claimedUsername);
+      checkAvailability(claimedUsername);
+      // Clear it so it doesn't persist forever
+      localStorage.removeItem("claimedUsername");
+    }
+  }, [checkAvailability]);
+
+  useEffect(() => {
     if (debounceTimerRef.current) {
       clearTimeout(debounceTimerRef.current);
     }
