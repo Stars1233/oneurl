@@ -6,7 +6,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import {
   LayoutDashboard,
-  Link2,
   BarChart3,
   Settings,
   LogOut,
@@ -51,11 +50,6 @@ export function DashboardSidebar({ user }: DashboardSidebarProps) {
       title: "Dashboard",
       url: "/dashboard",
       icon: LayoutDashboard,
-    },
-    {
-      title: "Links",
-      url: "/dashboard/links",
-      icon: Link2,
     },
     {
       title: "Analytics",

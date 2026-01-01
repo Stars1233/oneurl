@@ -12,6 +12,9 @@ import {
 } from "@/components/ui/empty";
 import LinkClickTracker from "./link-click-tracker";
 import { getAvatarUrl } from "@/lib/utils";
+import { ProfileCardHeader } from "@/components/profile-card-header";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 type Props = {
   params: Promise<{ username: string }>;
@@ -68,14 +71,25 @@ export default async function PublicProfilePage({ params }: Props) {
 
   const links = user.profile.links.filter((link) => link.isActive);
 
+  const avatarUrl = getAvatarUrl(user);
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-b from-background to-muted/20 p-4">
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-sm">
+        {/* Simple Card */}
         <div className="rounded-2xl border bg-card p-8 shadow-lg">
+          {/* Header with Logo and Share buttons */}
+          <ProfileCardHeader
+            name={user.name}
+            username={user.username}
+            avatarUrl={avatarUrl}
+          />
+
+          {/* Profile Content */}
           <div className="flex flex-col items-center space-y-4">
-            {getAvatarUrl(user) && (
+            {avatarUrl && (
               <Image
-                src={getAvatarUrl(user)!}
+                src={avatarUrl}
                 alt={user.name}
                 width={96}
                 height={96}
@@ -88,11 +102,12 @@ export default async function PublicProfilePage({ params }: Props) {
                 <p className="text-sm text-muted-foreground">@{user.username}</p>
               )}
               {user.bio && (
-                <p className="mt-3 text-sm leading-relaxed">{user.bio}</p>
+                <p className="mt-3 text-sm leading-relaxed whitespace-pre-line">{user.bio}</p>
               )}
             </div>
           </div>
 
+          {/* Links */}
           {links.length > 0 && (
             <div className="mt-8 space-y-3">
               {links.map((link) => (
@@ -128,6 +143,18 @@ export default async function PublicProfilePage({ params }: Props) {
               </Empty>
             </div>
           )}
+
+          {/* CTA Button at bottom */}
+          <div className="mt-8 flex justify-center">
+            <Link href="/signup">
+              <Button
+                variant="outline"
+                className="rounded-full w-full max-w-xs"
+              >
+                Join {user.username || "OneURL"} on OneURL
+              </Button>
+            </Link>
+          </div>
         </div>
       </div>
     </div>

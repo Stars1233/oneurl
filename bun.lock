@@ -5,6 +5,7 @@
       "name": "oneurl",
       "dependencies": {
         "@base-ui/react": "^1.0.0",
+        "@lglab/react-qr-code": "^1.4.9",
         "@prisma/adapter-neon": "^7.2.0",
         "@prisma/client": "^7.2.0",
         "@radix-ui/react-slot": "^1.2.4",
@@ -211,6 +212,8 @@
     "@jridgewell/sourcemap-codec": ["@jridgewell/sourcemap-codec@1.5.5", "", {}, "sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og=="],
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
+
+    "@lglab/react-qr-code": ["@lglab/react-qr-code@1.4.9", "", { "peerDependencies": { "react": "^18 || ^19" } }, "sha512-THnysK9hv9Sa7SOunCwt9Ba0VNmTBCf8pLivsCdfKOoYUjb2WQBD37sg1brxWFT0aO7cVI1bXJsY+R3pOkFxTQ=="],
 
     "@mrleebo/prisma-ast": ["@mrleebo/prisma-ast@0.12.1", "", { "dependencies": { "chevrotain": "^10.5.0", "lilconfig": "^2.1.0" } }, "sha512-JwqeCQ1U3fvccttHZq7Tk0m/TMC6WcFAQZdukypW3AzlJYKYTGNVd1ANU2GuhKnv4UQuOFj3oAl0LLG/gxFN1w=="],
 
