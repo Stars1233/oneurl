@@ -145,12 +145,12 @@ export function AnalyticsClient({
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["analytics"] }),
-        queryClient.invalidateQueries({ queryKey: ["link-click-counts"] }),
-        queryClient.refetchQueries({ queryKey: ["analytics"] }),
-        queryClient.refetchQueries({ queryKey: ["link-click-counts"] }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: ["analytics", selectedLinkId] });
+      await queryClient.invalidateQueries({ queryKey: ["link-click-counts"] });
+      await queryClient.refetchQueries({ queryKey: ["analytics", selectedLinkId] });
+      await queryClient.refetchQueries({ queryKey: ["link-click-counts"] });
+    } catch (error) {
+      console.error("Failed to refresh analytics:", error);
     } finally {
       setIsRefreshing(false);
     }

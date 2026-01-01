@@ -68,10 +68,10 @@ export function DashboardClient({ initialProfile }: DashboardClientProps) {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["link-click-counts"] }),
-        queryClient.refetchQueries({ queryKey: ["link-click-counts"] }),
-      ]);
+      await queryClient.invalidateQueries({ queryKey: ["link-click-counts"] });
+      await queryClient.refetchQueries({ queryKey: ["link-click-counts"] });
+    } catch (error) {
+      console.error("Failed to refresh analytics:", error);
     } finally {
       setIsRefreshing(false);
     }
