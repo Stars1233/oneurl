@@ -7,7 +7,7 @@ type CalBookingButtonProps = {
   calLink: string | null | undefined;
   className?: string;
   variant?: "default" | "secondary" | "outline" | "ghost" | "destructive" | "destructive-outline";
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "lg" | "xl" | "xs" | "default";
 };
 
 export function CalBookingButton({
