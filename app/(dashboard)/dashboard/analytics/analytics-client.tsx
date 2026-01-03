@@ -3,50 +3,48 @@
 import { useState } from "react";
 import type * as React from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import {
-  LineChart,
-  Line,
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip as RechartsTooltip,
-  ResponsiveContainer,
-} from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Tooltip,
   TooltipTrigger,
   TooltipPopup,
   TooltipProvider,
 } from "@/components/ui/tooltip";
-import { X, Globe, Monitor, Smartphone, Tablet, TrendingUp, Users, MousePointerClick, RefreshCw } from "lucide-react";
+import { 
+  Globe, 
+  TrendingUp, 
+  Users, 
+  MousePointerClick, 
+  RefreshCw, 
+  Clock,
+  Eye,
+  Activity,
+  User,
+  BarChart3
+} from "lucide-react";
 import {
   Empty,
   EmptyHeader,
   EmptyTitle,
-  EmptyDescription,
   EmptyMedia,
 } from "@/components/ui/empty";
-import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { MetricCard } from "@/components/analytics/metric-card";
+import { TrafficTrendsChart } from "@/components/analytics/traffic-trends-chart";
+import { TrafficSourcesSection } from "@/components/analytics/traffic-sources-section";
+import { PagesSection } from "@/components/analytics/pages-section";
+import { DeviceBreakdown } from "@/components/analytics/device-breakdown";
+import { BrowserBreakdown } from "@/components/analytics/browser-breakdown";
+import { OSBreakdown } from "@/components/analytics/os-breakdown";
+import { VisitorLocations } from "@/components/analytics/visitor-locations";
 
-const COLORS = [
-  "#8884d8",
-  "#82ca9d",
-  "#ffc658",
-  "#ff8042",
-  "#0088fe",
-  "#ff6b9d",
-  "#c44569",
-];
-
-const PRIMARY_CHART_COLOR = "#8884d8";
 
 interface ProfileStats {
   totalClicks: number;
@@ -63,7 +61,15 @@ interface LinkStats {
   linkId: string;
   totalClicks: number;
   uniqueVisitors?: number;
-  clicksOverTime: Array<{ date: string; clicks: number }>;
+  sessions?: number;
+  bounceRate?: number;
+  avgSessionDuration?: number;
+  clicksChange?: number;
+  sessionsChange?: number;
+  visitorsChange?: number;
+  bounceRateChange?: number;
+  sessionDurationChange?: number;
+  clicksOverTime: Array<{ date: string; clicks: number; sessions?: number; visitors?: number }>;
   clicksByCountry: Array<{ country: string; clicks: number }>;
   clicksByDevice: Array<{ device: string; clicks: number }>;
   clicksByBrowser: Array<{ browser: string; clicks: number }>;
@@ -93,33 +99,13 @@ function formatNumber(num: number): string {
   return num.toString();
 }
 
-function getReferrerIcon(referrer: string) {
-  const lower = referrer.toLowerCase();
-  if (lower.includes("twitter") || lower.includes("x.com")) return "𝕏";
-  if (lower.includes("linkedin")) return "in";
-  if (lower.includes("facebook")) return "f";
-  if (lower.includes("youtube")) return "▶";
-  if (lower.includes("google")) return "G";
-  if (lower.includes("bing")) return "Q";
-  if (lower === "direct") return "→";
-  return "🌐";
-}
-
-function getOSIcon(os: string) {
-  const lower = os.toLowerCase();
-  if (lower.includes("windows")) return "🪟";
-  if (lower.includes("macos") || lower.includes("mac")) return "🍎";
-  if (lower.includes("android")) return "🤖";
-  if (lower.includes("ios")) return "📱";
-  if (lower.includes("linux")) return "🐧";
-  return "💻";
-}
-
-function getDeviceIcon(device: string) {
-  const lower = device.toLowerCase();
-  if (lower.includes("mobile")) return <Smartphone className="h-4 w-4" />;
-  if (lower.includes("tablet")) return <Tablet className="h-4 w-4" />;
-  return <Monitor className="h-4 w-4" />;
+function formatDuration(seconds: number): string {
+  if (seconds < 60) {
+    return `${Math.round(seconds)}s`;
+  }
+  const minutes = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${minutes}m ${secs}s`;
 }
 
 export function AnalyticsClient({
@@ -127,7 +113,6 @@ export function AnalyticsClient({
   links,
 }: AnalyticsClientProps) {
   const [selectedLinkId, setSelectedLinkId] = useState<string | null>(null);
-  const [trafficSourceTab, setTrafficSourceTab] = useState("referrers");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const queryClient = useQueryClient();
 
@@ -180,16 +165,6 @@ export function AnalyticsClient({
         .slice(0, 20)
     : [];
 
-  const clicksOverTimeData = stats.clicksOverTime
-    ? stats.clicksOverTime.map((item: { date: string; clicks: number }) => ({
-        date: new Date(item.date).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        }),
-        clicks: item.clicks,
-      }))
-    : [];
-
   const linkStats = stats as LinkStats;
   const profileStats = stats as ProfileStats;
 
@@ -238,10 +213,49 @@ export function AnalyticsClient({
     return total > 0 ? ((clicks / total) * 100).toFixed(2) : "0";
   };
 
+  const clicksOverTimeData = stats.clicksOverTime
+    ? stats.clicksOverTime.map((item: { date: string; clicks: number; sessions?: number; visitors?: number }) => ({
+        date: new Date(item.date).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+        }),
+        clicks: item.clicks,
+        sessions: item.sessions || 0,
+        visitors: item.visitors || 0,
+        fullDate: item.date,
+      }))
+    : [];
+
+  const sessions = linkStats.sessions || 0;
+  const bounceRate = linkStats.bounceRate || 0;
+  const avgSessionDuration = linkStats.avgSessionDuration || 0;
+  const clicksChange = linkStats.clicksChange || 0;
+  const sessionsChange = linkStats.sessionsChange || 0;
+  const visitorsChange = linkStats.visitorsChange || 0;
+  const bounceRateChange = linkStats.bounceRateChange || 0;
+  const sessionDurationChange = linkStats.sessionDurationChange || 0;
+
   return (
     <TooltipProvider>
       <div className="space-y-6">
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex-1 max-w-sm">
+            <Select value={selectedLinkId || ""} onValueChange={(value) => setSelectedLinkId(value || null)}>
+              <SelectTrigger>
+                <SelectValue>
+                  {selectedLinkId ? selectedLink?.title : "Select a link to view analytics"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">All Links</SelectItem>
+                {links.map((link) => (
+                  <SelectItem key={link.id} value={link.id}>
+                    {link.title}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <Tooltip>
             <TooltipTrigger
               render={
@@ -260,329 +274,107 @@ export function AnalyticsClient({
           </Tooltip>
         </div>
 
-        {selectedLinkId && (
-          <Card className="border-primary/20 bg-primary/5">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">
-                    Viewing analytics for
-                  </p>
-                  <p className="text-lg font-semibold">{selectedLink?.title}</p>
-                  <p className="text-sm text-muted-foreground truncate max-w-md">
-                    {selectedLink?.url}
-                  </p>
+        {!selectedLinkId ? (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            <MetricCard
+              title="Total Clicks"
+              value={formatNumber(totalClicks)}
+              icon={MousePointerClick}
+              iconColor="text-blue-500"
+            />
+            <MetricCard
+              title="Unique Visitors"
+              value={formatNumber(uniqueVisitors)}
+              icon={Users}
+              iconColor="text-emerald-500"
+            />
+            <MetricCard
+              title="Avg. Clicks/Visitor"
+              value={avgClicksPerVisitor}
+              icon={TrendingUp}
+              iconColor="text-purple-500"
+            />
+            <MetricCard
+              title="Active Links"
+              value={links.filter((l) => l.isActive !== false).length.toString()}
+              icon={Globe}
+              iconColor="text-amber-500"
+            />
                 </div>
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setSelectedLinkId(null)}
-                      >
-                        <X className="h-4 w-4" />
-                        View All Links
-                      </Button> as React.ReactElement
-                    }
-                  />
-                  <TooltipPopup>View analytics for all links</TooltipPopup>
-                </Tooltip>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+            <MetricCard
+              title="Pageviews"
+              value={formatNumber(totalClicks)}
+              change={clicksChange}
+              icon={Eye}
+              iconColor="text-blue-500"
+            />
+            <MetricCard
+              title="Sessions"
+              value={formatNumber(sessions)}
+              change={sessionsChange}
+              icon={Activity}
+              iconColor="text-emerald-500"
+            />
+            <MetricCard
+              title="Visitors"
+              value={formatNumber(uniqueVisitors)}
+              change={visitorsChange}
+              icon={User}
+              iconColor="text-purple-500"
+            />
+            <MetricCard
+              title="Bounce Rate"
+              value={`${bounceRate.toFixed(1)}%`}
+              change={bounceRateChange}
+              icon={BarChart3}
+              iconColor="text-amber-500"
+              isPositive={(c) => c <= 0}
+            />
+            <MetricCard
+              title="Session Duration"
+              value={formatDuration(avgSessionDuration)}
+              change={sessionDurationChange}
+              icon={Clock}
+              iconColor="text-indigo-500"
+            />
               </div>
-            </CardContent>
-          </Card>
         )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <MousePointerClick className="h-4 w-4" />
-              Total Clicks
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{formatNumber(totalClicks)}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Users className="h-4 w-4" />
-              Unique Visitors
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{formatNumber(uniqueVisitors)}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <TrendingUp className="h-4 w-4" />
-              Avg. Clicks/Visitor
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{avgClicksPerVisitor}</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-              <Globe className="h-4 w-4" />
-              Active Links
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">
-              {links.filter((l) => l.isActive !== false).length}
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Traffic Trends</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoadingStats ? (
-            <Skeleton className="h-[400px] w-full" />
-          ) : clicksOverTimeData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={400}>
-              <LineChart data={clicksOverTimeData}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                <XAxis
-                  dataKey="date"
-                  className="text-xs"
-                  tick={{ fill: "hsl(var(--muted-foreground))" }}
-                />
-                <YAxis
-                  className="text-xs"
-                  tick={{ fill: "hsl(var(--muted-foreground))" }}
-                />
-                <RechartsTooltip
-                  contentStyle={{
-                    backgroundColor: "hsl(var(--background))",
-                    border: "1px solid hsl(var(--border))",
-                    borderRadius: "var(--radius)",
-                  }}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="clicks"
-                  stroke={PRIMARY_CHART_COLOR}
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  activeDot={{ r: 6 }}
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          ) : (
-            <Empty>
-              <EmptyHeader>
-                <EmptyMedia variant="icon">
-                  <TrendingUp />
-                </EmptyMedia>
-                <EmptyTitle>No data yet</EmptyTitle>
-                <EmptyDescription>
-                  Click data will appear here as visitors interact with your
-                  links.
-                </EmptyDescription>
-              </EmptyHeader>
-            </Empty>
-          )}
-        </CardContent>
-      </Card>
+        <TrafficTrendsChart
+          data={clicksOverTimeData}
+          isLoading={isLoadingStats}
+          showMultipleLines={!!selectedLinkId}
+        />
 
       <div className="grid gap-6 md:grid-cols-2">
-        <Card>
-          <CardHeader>
-            <CardTitle>Traffic Sources</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Tabs value={trafficSourceTab} onValueChange={setTrafficSourceTab}>
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="referrers">
-                  Referrers ({referrerData.length})
-                </TabsTrigger>
-                <TabsTrigger value="utm-sources">
-                  UTM Sources ({utmSourceData.length})
-                </TabsTrigger>
-                <TabsTrigger value="utm-mediums">
-                  UTM Mediums ({utmMediumData.length})
-                </TabsTrigger>
-                <TabsTrigger value="utm-campaigns">
-                  UTM Campaigns ({utmCampaignData.length})
-                </TabsTrigger>
-              </TabsList>
+        <TrafficSourcesSection
+          referrers={referrerData.map((item) => ({ referrer: item.referrer, clicks: item.clicks }))}
+          utmSources={utmSourceData.map((item) => ({ source: item.source, clicks: item.clicks }))}
+          utmMediums={utmMediumData.map((item) => ({ medium: item.medium, clicks: item.clicks }))}
+          utmCampaigns={utmCampaignData.map((item) => ({ campaign: item.campaign, clicks: item.clicks }))}
+        />
 
-              <TabsContent value="referrers" className="mt-4">
-                {referrerData.length > 0 ? (
-                  <div className="space-y-2">
-                    {referrerData.map((item) => {
-                      const total = totalForShare(referrerData);
-                      const share = getShare(item.clicks, total);
-                      return (
-                        <div
-                          key={item.referrer}
-                          className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
-                        >
-                          <div className="flex items-center gap-2 flex-1 min-w-0">
-                            <span className="text-lg">
-                              {getReferrerIcon(item.referrer)}
-                            </span>
-                            <span className="text-sm font-medium truncate">
-                              {item.referrer}
-                            </span>
-                          </div>
-                          <div className="flex items-center gap-4 ml-4">
-                            <span className="text-sm text-muted-foreground">
-                              {item.clicks}
-                            </span>
-                            <span className="text-sm font-medium w-16 text-right">
-                              {share}%
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyMedia variant="icon">
-                        <Globe />
-                      </EmptyMedia>
-                      <EmptyTitle>No referrer data</EmptyTitle>
-                    </EmptyHeader>
-                  </Empty>
-                )}
-              </TabsContent>
-
-              <TabsContent value="utm-sources" className="mt-4">
-                {utmSourceData.length > 0 ? (
-                  <div className="space-y-2">
-                    {utmSourceData.map((item) => {
-                      const total = totalForShare(utmSourceData);
-                      const share = getShare(item.clicks, total);
-                      return (
-                        <div
-                          key={item.source}
-                          className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
-                        >
-                          <span className="text-sm font-medium truncate">
-                            {item.source}
-                          </span>
-                          <div className="flex items-center gap-4 ml-4">
-                            <span className="text-sm text-muted-foreground">
-                              {item.clicks}
-                            </span>
-                            <span className="text-sm font-medium w-16 text-right">
-                              {share}%
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyMedia variant="icon">
-                        <Globe />
-                      </EmptyMedia>
-                      <EmptyTitle>No UTM source data</EmptyTitle>
-                    </EmptyHeader>
-                  </Empty>
-                )}
-              </TabsContent>
-
-              <TabsContent value="utm-mediums" className="mt-4">
-                {utmMediumData.length > 0 ? (
-                  <div className="space-y-2">
-                    {utmMediumData.map((item) => {
-                      const total = totalForShare(utmMediumData);
-                      const share = getShare(item.clicks, total);
-                      return (
-                        <div
-                          key={item.medium}
-                          className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
-                        >
-                          <span className="text-sm font-medium truncate">
-                            {item.medium}
-                          </span>
-                          <div className="flex items-center gap-4 ml-4">
-                            <span className="text-sm text-muted-foreground">
-                              {item.clicks}
-                            </span>
-                            <span className="text-sm font-medium w-16 text-right">
-                              {share}%
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyMedia variant="icon">
-                        <Globe />
-                      </EmptyMedia>
-                      <EmptyTitle>No UTM medium data</EmptyTitle>
-                    </EmptyHeader>
-                  </Empty>
-                )}
-              </TabsContent>
-
-              <TabsContent value="utm-campaigns" className="mt-4">
-                {utmCampaignData.length > 0 ? (
-                  <div className="space-y-2">
-                    {utmCampaignData.map((item) => {
-                      const total = totalForShare(utmCampaignData);
-                      const share = getShare(item.clicks, total);
-                      return (
-                        <div
-                          key={item.campaign}
-                          className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
-                        >
-                          <span className="text-sm font-medium truncate">
-                            {item.campaign}
-                          </span>
-                          <div className="flex items-center gap-4 ml-4">
-                            <span className="text-sm text-muted-foreground">
-                              {item.clicks}
-                            </span>
-                            <span className="text-sm font-medium w-16 text-right">
-                              {share}%
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <Empty>
-                    <EmptyHeader>
-                      <EmptyMedia variant="icon">
-                        <Globe />
-                      </EmptyMedia>
-                      <EmptyTitle>No UTM campaign data</EmptyTitle>
-                    </EmptyHeader>
-                  </Empty>
-                )}
-              </TabsContent>
-            </Tabs>
-          </CardContent>
-        </Card>
+        {selectedLinkId && (
+          <PagesSection
+            link={{
+              title: selectedLink?.title || "",
+              url: selectedLink?.url || "",
+              clicks: totalClicks,
+              sessions: sessions,
+            }}
+            timeAnalysis={clicksOverTimeData.map((item: { date: string; clicks: number; sessions: number; visitors: number }) => ({
+              date: item.date,
+              clicks: item.clicks,
+              sessions: item.sessions,
+              visitors: item.visitors,
+            }))}
+          />
+        )}
 
         {!selectedLinkId && (
-          <Card>
+          <Card className="rounded-none">
             <CardHeader>
               <CardTitle>Top Pages</CardTitle>
             </CardHeader>
@@ -636,200 +428,13 @@ export function AnalyticsClient({
       {selectedLinkId && (
         <>
           <div className="grid gap-6 md:grid-cols-2">
-            {deviceData.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Devices</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={deviceData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) =>
-                          `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
-                        }
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {deviceData.map((_, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[index % COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--background))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "var(--radius)",
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="mt-4 space-y-2">
-                    {deviceData.map((item) => (
-                      <div
-                        key={item.name}
-                        className="flex items-center justify-between text-sm"
-                      >
-                        <div className="flex items-center gap-2">
-                          {getDeviceIcon(item.name)}
-                          <span>{item.name}</span>
-                        </div>
-                        <span className="font-medium">{item.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            {browserData.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>Browsers</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={browserData}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) =>
-                          `${name} ${((percent ?? 0) * 100).toFixed(0)}%`
-                        }
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {browserData.map((_, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[index % COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip
-                        contentStyle={{
-                          backgroundColor: "hsl(var(--background))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: "var(--radius)",
-                        }}
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                  <div className="mt-4 space-y-2">
-                    {browserData.map((item) => {
-                      const total = totalForShare(browserData);
-                      const share = getShare(item.value, total);
-                      return (
-                        <div
-                          key={item.name}
-                          className="flex items-center justify-between text-sm"
-                        >
-                          <span>{item.name}</span>
-                          <div className="flex items-center gap-4">
-                            <span className="text-muted-foreground">
-                              {item.value}
-                            </span>
-                            <span className="font-medium w-16 text-right">
-                              {share}%
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+            <DeviceBreakdown data={deviceData} />
+            <BrowserBreakdown data={browserData} />
           </div>
-
-          {osData.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Operating Systems</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {osData.map((item) => {
-                    const total = totalForShare(osData);
-                    const share = getShare(item.value, total);
-                    return (
-                      <div
-                        key={item.name}
-                        className="flex items-center justify-between p-2 rounded-lg hover:bg-muted/50"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="text-lg">
-                            {getOSIcon(item.name)}
-                          </span>
-                          <span className="text-sm font-medium">
-                            {item.name}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-4">
-                          <span className="text-sm text-muted-foreground">
-                            {item.value}
-                          </span>
-                          <span className="text-sm font-medium w-16 text-right">
-                            {share}%
-                          </span>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {countryData.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Top Countries</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={countryData}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                    <XAxis
-                      dataKey="name"
-                      className="text-xs"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
-                      angle={-45}
-                      textAnchor="end"
-                      height={80}
-                    />
-                    <YAxis
-                      className="text-xs"
-                      tick={{ fill: "hsl(var(--muted-foreground))" }}
-                    />
-                    <RechartsTooltip
-                      contentStyle={{
-                        backgroundColor: "hsl(var(--background))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: "var(--radius)",
-                      }}
-                    />
-                    <Bar
-                      dataKey="value"
-                      fill={PRIMARY_CHART_COLOR}
-                      radius={[4, 4, 0, 0]}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
+          <div className="grid gap-6 md:grid-cols-2">
+            <OSBreakdown data={osData} />
+            <VisitorLocations data={countryData} />
+          </div>
         </>
       )}
       </div>

@@ -236,7 +236,7 @@ export function DashboardClient({ initialProfile }: DashboardClientProps) {
           <Skeleton className="h-5 w-96" />
         </div>
         <div className="space-y-4">
-          <Card>
+          <Card className="rounded-none">
             <CardContent className="p-6">
               <Skeleton className="h-20 w-full" />
             </CardContent>
@@ -298,7 +298,7 @@ export function DashboardClient({ initialProfile }: DashboardClientProps) {
           </div>
 
           {links.length === 0 ? (
-            <Card>
+            <Card className="rounded-none">
               <CardContent className="p-12">
                 <Empty>
                   <EmptyHeader>
@@ -420,7 +420,7 @@ export function DashboardClient({ initialProfile }: DashboardClientProps) {
               </div>
             )}
           </div>
-          <div className="bg-gradient-to-b from-background to-muted/20 p-4 rounded-lg overflow-auto max-h-[calc(100vh-200px)]">
+          <div className="bg-gradient-to-b from-background to-muted/20 p-4 rounded-none overflow-auto max-h-[calc(100vh-200px)]">
             <ProfilePreview
               name={displayProfile.name}
               username={displayProfile.username}

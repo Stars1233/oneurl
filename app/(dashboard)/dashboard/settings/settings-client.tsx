@@ -95,7 +95,7 @@ export default function SettingsClient({
   return (
     <div className="min-h-screen flex items-center justify-center p-8">
       <div className="w-full max-w-2xl space-y-6">
-        <Card>
+        <Card className="rounded-none">
           <CardHeader>
             <CardTitle>Profile Picture</CardTitle>
           </CardHeader>
@@ -150,7 +150,7 @@ export default function SettingsClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-none">
           <CardHeader>
             <CardTitle>Profile Information</CardTitle>
           </CardHeader>
@@ -243,7 +243,7 @@ export default function SettingsClient({
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="rounded-none">
           <CardHeader>
             <CardTitle>Danger Zone</CardTitle>
           </CardHeader>

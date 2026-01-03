@@ -89,14 +89,97 @@ export const analyticsService = {
     ]);
 
     const clicksByDate = new Map<string, number>();
+    const sessionsByDate = new Map<string, Set<string>>();
+    const visitorsByDate = new Map<string, Set<string>>();
+    
     allClicks.forEach((click) => {
       const date = click.clickedAt.toISOString().split("T")[0];
       clicksByDate.set(date, (clicksByDate.get(date) || 0) + 1);
+      
+      if (click.sessionFingerprint) {
+        if (!sessionsByDate.has(date)) {
+          sessionsByDate.set(date, new Set());
+        }
+        sessionsByDate.get(date)!.add(click.sessionFingerprint);
+        
+        if (!visitorsByDate.has(date)) {
+          visitorsByDate.set(date, new Set());
+        }
+        visitorsByDate.get(date)!.add(click.sessionFingerprint);
+      }
     });
 
     const clicksOverTimeFormatted = Array.from(clicksByDate.entries())
-      .map(([date, clicks]) => ({ date, clicks }))
+      .map(([date, clicks]) => {
+        const sessions = sessionsByDate.get(date)?.size || 0;
+        const visitors = visitorsByDate.get(date)?.size || 0;
+        return { date, clicks, sessions, visitors };
+      })
       .sort((a, b) => a.date.localeCompare(b.date));
+
+    const sessionStats = allClicks
+      .filter((c) => c.sessionFingerprint)
+      .reduce((acc, click) => {
+        const sessionId = click.sessionFingerprint!;
+        if (!acc[sessionId]) {
+          acc[sessionId] = [];
+        }
+        acc[sessionId].push(click.clickedAt);
+        return acc;
+      }, {} as Record<string, Date[]>);
+
+    const sessions = Object.keys(sessionStats).length;
+    const bouncedSessions = Object.values(sessionStats).filter(
+      (clicks) => clicks.length === 1
+    ).length;
+    const bounceRate = sessions > 0 ? (bouncedSessions / sessions) * 100 : 0;
+
+    const sessionDurations = Object.values(sessionStats)
+      .map((clicks) => {
+        if (clicks.length < 2) return 0;
+        const sorted = clicks.sort((a, b) => a.getTime() - b.getTime());
+        return (sorted[sorted.length - 1].getTime() - sorted[0].getTime()) / 1000;
+      })
+      .filter((d) => d > 0);
+    const avgSessionDuration = sessionDurations.length > 0
+      ? sessionDurations.reduce((a, b) => a + b, 0) / sessionDurations.length
+      : 0;
+
+    const previousPeriodClicks = clicksOverTimeFormatted.length > 0
+      ? clicksOverTimeFormatted.slice(0, Math.floor(clicksOverTimeFormatted.length / 2))
+          .reduce((sum, d) => sum + d.clicks, 0)
+      : 0;
+    const currentPeriodClicks = clicksOverTimeFormatted.length > 0
+      ? clicksOverTimeFormatted.slice(Math.floor(clicksOverTimeFormatted.length / 2))
+          .reduce((sum, d) => sum + d.clicks, 0)
+      : 0;
+    const clicksChange = previousPeriodClicks > 0
+      ? ((currentPeriodClicks - previousPeriodClicks) / previousPeriodClicks) * 100
+      : 0;
+
+    const previousPeriodSessions = clicksOverTimeFormatted.length > 0
+      ? clicksOverTimeFormatted.slice(0, Math.floor(clicksOverTimeFormatted.length / 2))
+          .reduce((sum, d) => sum + d.sessions, 0)
+      : 0;
+    const currentPeriodSessions = clicksOverTimeFormatted.length > 0
+      ? clicksOverTimeFormatted.slice(Math.floor(clicksOverTimeFormatted.length / 2))
+          .reduce((sum, d) => sum + d.sessions, 0)
+      : 0;
+    const sessionsChange = previousPeriodSessions > 0
+      ? ((currentPeriodSessions - previousPeriodSessions) / previousPeriodSessions) * 100
+      : 0;
+
+    const previousPeriodVisitors = clicksOverTimeFormatted.length > 0
+      ? clicksOverTimeFormatted.slice(0, Math.floor(clicksOverTimeFormatted.length / 2))
+          .reduce((sum, d) => sum + d.visitors, 0)
+      : 0;
+    const currentPeriodVisitors = clicksOverTimeFormatted.length > 0
+      ? clicksOverTimeFormatted.slice(Math.floor(clicksOverTimeFormatted.length / 2))
+          .reduce((sum, d) => sum + d.visitors, 0)
+      : 0;
+    const visitorsChange = previousPeriodVisitors > 0
+      ? ((currentPeriodVisitors - previousPeriodVisitors) / previousPeriodVisitors) * 100
+      : 0;
 
     const clicksByCountryFormatted = clicksByCountry.map((item) => ({
       country: item.country || "Unknown",
@@ -138,10 +221,73 @@ export const analyticsService = {
       clicks: item._count,
     }));
 
+    const previousPeriodBounceRate = clicksOverTimeFormatted.length > 0
+      ? (() => {
+          const prevClicks = allClicks.filter((c) => {
+            const date = c.clickedAt.toISOString().split("T")[0];
+            const dateIndex = clicksOverTimeFormatted.findIndex((d) => d.date === date);
+            return dateIndex >= 0 && dateIndex < Math.floor(clicksOverTimeFormatted.length / 2);
+          });
+          const prevSessionStats = prevClicks
+            .filter((c) => c.sessionFingerprint)
+            .reduce((acc, click) => {
+              const sessionId = click.sessionFingerprint!;
+              if (!acc[sessionId]) acc[sessionId] = [];
+              acc[sessionId].push(click.clickedAt);
+              return acc;
+            }, {} as Record<string, Date[]>);
+          const prevSessions = Object.keys(prevSessionStats).length;
+          const prevBounced = Object.values(prevSessionStats).filter((c) => c.length === 1).length;
+          return prevSessions > 0 ? (prevBounced / prevSessions) * 100 : 0;
+        })()
+      : 0;
+    const bounceRateChange = previousPeriodBounceRate > 0
+      ? ((bounceRate - previousPeriodBounceRate) / previousPeriodBounceRate) * 100
+      : bounceRate > 0 ? 100 : 0;
+
+    const previousPeriodDuration = clicksOverTimeFormatted.length > 0
+      ? (() => {
+          const prevClicks = allClicks.filter((c) => {
+            const date = c.clickedAt.toISOString().split("T")[0];
+            const dateIndex = clicksOverTimeFormatted.findIndex((d) => d.date === date);
+            return dateIndex >= 0 && dateIndex < Math.floor(clicksOverTimeFormatted.length / 2);
+          });
+          const prevSessionStats = prevClicks
+            .filter((c) => c.sessionFingerprint)
+            .reduce((acc, click) => {
+              const sessionId = click.sessionFingerprint!;
+              if (!acc[sessionId]) acc[sessionId] = [];
+              acc[sessionId].push(click.clickedAt);
+              return acc;
+            }, {} as Record<string, Date[]>);
+          const prevDurations = Object.values(prevSessionStats)
+            .map((clicks) => {
+              if (clicks.length < 2) return 0;
+              const sorted = clicks.sort((a, b) => a.getTime() - b.getTime());
+              return (sorted[sorted.length - 1].getTime() - sorted[0].getTime()) / 1000;
+            })
+            .filter((d) => d > 0);
+          return prevDurations.length > 0
+            ? prevDurations.reduce((a, b) => a + b, 0) / prevDurations.length
+            : 0;
+        })()
+      : 0;
+    const sessionDurationChange = previousPeriodDuration > 0
+      ? ((avgSessionDuration - previousPeriodDuration) / previousPeriodDuration) * 100
+      : avgSessionDuration > 0 ? 100 : 0;
+
     return {
       linkId,
       totalClicks,
       uniqueVisitors: uniqueVisitors.length,
+      sessions,
+      bounceRate,
+      avgSessionDuration,
+      clicksChange,
+      sessionsChange,
+      visitorsChange,
+      bounceRateChange,
+      sessionDurationChange,
       clicksOverTime: clicksOverTimeFormatted,
       clicksByCountry: clicksByCountryFormatted,
       clicksByDevice: clicksByDeviceFormatted,
