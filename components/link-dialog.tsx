@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import validator from "validator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Check, Loader2 } from "lucide-react";
@@ -64,6 +65,7 @@ function getDomainIcon(url: string): string {
   }
 }
 
+
 export function LinkDialog({
   open,
   onOpenChange,
@@ -84,63 +86,100 @@ export function LinkDialog({
   const [isValidUrl, setIsValidUrl] = useState(false);
   const [manualPreviewLoading, setManualPreviewLoading] = useState(false);
 
-  const validateUrl = (url: string): boolean => {
+  const validateUrl = useCallback((url: string, showError = false, showToast = false): boolean => {
     if (!url || url.trim() === "") {
       setIsValidUrl(false);
+      if (showError) {
+        setUrlError("URL is required");
+      }
+      if (showToast) {
+        toastError("URL required", "Please enter a URL");
+      }
       return false;
     }
 
-    try {
-      new URL(url.startsWith("http") ? url : `https://${url}`);
-      setIsValidUrl(true);
-      return true;
-    } catch {
+    const normalizedUrl = url.startsWith("http://") || url.startsWith("https://") 
+      ? url 
+      : `https://${url}`;
+
+    const isValid = validator.isURL(normalizedUrl, {
+      protocols: ["http", "https"],
+      require_protocol: false,
+      require_valid_protocol: true,
+      require_host: true,
+      require_port: false,
+      allow_protocol_relative_urls: false,
+      validate_length: true,
+    });
+
+    if (!isValid) {
       setIsValidUrl(false);
+      if (showError) {
+        setUrlError("Invalid URL format. Please enter a valid URL (e.g., example.com or https://example.com)");
+      }
+      if (showToast) {
+        toastError("Invalid URL", "Please enter a valid URL with a proper domain (e.g., example.com or https://example.com)");
+      }
       return false;
     }
-  };
+
+    setIsValidUrl(true);
+    if (showError) {
+      setUrlError("");
+    }
+    return true;
+  }, []);
 
   const fetchPreview = useCallback(async (url: string) => {
     if (!url || url.trim() === "") {
       setPreview(null);
       setIsValidUrl(false);
+      setUrlError("URL is required");
+      toastError("URL required", "Please enter a URL first");
       return;
     }
 
-    if (!validateUrl(url)) {
+    if (!validateUrl(url, true, true)) {
       setPreview(null);
       return;
     }
 
     setIsLoadingPreview(true);
     setManualPreviewLoading(true);
+    setUrlError("");
     try {
-      const response = await fetch(`/api/link-preview?url=${encodeURIComponent(url)}`);
+      const normalizedUrl = url.startsWith("http://") || url.startsWith("https://") 
+        ? url 
+        : `https://${url}`;
+      const response = await fetch(`/api/link-preview?url=${encodeURIComponent(normalizedUrl)}`);
       if (response.ok) {
         const data = await response.json();
         setPreview(data);
+        setUrlError("");
         if (data.title && !formTitle && !initialData) {
           setFormTitle(data.title);
         }
       } else {
         const errorData = await response.json().catch(() => ({ error: "Failed to fetch preview" }));
         setPreview(null);
-        // Don't show error if user can still manually enter title
+        const errorMessage = errorData.error || "Failed to fetch preview. Please check the URL and try again.";
         if (!isIconLink) {
-          setUrlError(errorData.error || "Preview unavailable. You can still add the link with a manual title.");
+          setUrlError(errorMessage);
         }
+        toastError("Preview failed", errorMessage);
       }
     } catch {
       setPreview(null);
-      // Don't show error if user can still manually enter title
+      const errorMessage = "Failed to fetch preview. Please check the URL and try again.";
       if (!isIconLink) {
-        setUrlError("Preview unavailable. You can still add the link with a manual title.");
+        setUrlError(errorMessage);
       }
+      toastError("Preview failed", errorMessage);
     } finally {
       setIsLoadingPreview(false);
       setManualPreviewLoading(false);
     }
-  }, [formTitle, initialData, isIconLink]);
+  }, [formTitle, initialData, isIconLink, validateUrl]);
 
   useEffect(() => {
     if (open) {
@@ -159,11 +198,16 @@ export function LinkDialog({
       setUrlError("");
       setIsValidUrl(false);
     }
-  }, [open, initialData?.id]);
+  }, [open, initialData]);
 
   const handleManualPreview = async () => {
     if (!formUrl.trim()) {
       setUrlError("Please enter a URL first");
+      toastError("URL required", "Please enter a URL first");
+      return;
+    }
+
+    if (!validateUrl(formUrl, true, true)) {
       return;
     }
 
@@ -175,17 +219,20 @@ export function LinkDialog({
     }
   };
 
-  // Only validate URL format on change, don't fetch preview automatically
   useEffect(() => {
     if (!open) return;
     
     if (formUrl.trim()) {
-      validateUrl(formUrl);
+      const isValid = validateUrl(formUrl, false);
+      if (!isValid && formUrl.length > 0) {
+        setUrlError("");
+      }
     } else {
       setIsValidUrl(false);
       setPreview(null);
+      setUrlError("");
     }
-  }, [formUrl, open, initialData]);
+  }, [formUrl, open, validateUrl]);
 
   const handleOpenChange = (newOpen: boolean) => {
     onOpenChange(newOpen);
@@ -196,36 +243,54 @@ export function LinkDialog({
     setTitleError("");
     setUrlError("");
 
-    // For non-icon links, require either preview OR a manually entered title
-    if (!isIconLink && !preview && !formTitle.trim()) {
-      setUrlError("Please enter a title or click 'Preview' to fetch link information");
-      toastError("Title required", "Please enter a title or click 'Preview' to fetch link information");
+    if (!formUrl.trim()) {
+      setUrlError("URL is required");
+      toastError("URL required", "Please enter a URL");
+      return;
+    }
+
+    if (!validateUrl(formUrl, true)) {
+      toastError("Invalid URL", "Please enter a valid URL");
+      return;
+    }
+
+    if (!isIconLink && !preview && !initialData) {
+      setUrlError("Please click 'Preview' to fetch link information before adding");
+      toastError("Preview required", "Please click 'Preview' to fetch link information before adding");
       return;
     }
 
     try {
-      // Auto-generate title if not provided (for both icon and non-icon links)
       let titleToUse = formTitle.trim();
-      if (!titleToUse) {
-        if (preview?.title) {
-          titleToUse = preview.title;
-        } else {
-          // Generate title from URL domain
-          try {
-            const urlObj = new URL(formUrl.startsWith("http") ? formUrl : `https://${formUrl}`);
-            const domain = urlObj.hostname.replace("www.", "");
-            const domainParts = domain.split(".");
-            titleToUse = domainParts[0].charAt(0).toUpperCase() + domainParts[0].slice(1);
-          } catch {
-            titleToUse = "Link";
-          }
+      if (!titleToUse && preview?.title) {
+        titleToUse = preview.title;
+      } else if (!titleToUse) {
+        try {
+          const normalizedUrl = formUrl.startsWith("http://") || formUrl.startsWith("https://") 
+            ? formUrl 
+            : `https://${formUrl}`;
+          const urlObj = new URL(normalizedUrl);
+          const domain = urlObj.hostname.replace("www.", "");
+          const domainParts = domain.split(".");
+          titleToUse = domainParts[0].charAt(0).toUpperCase() + domainParts[0].slice(1);
+        } catch {
+          titleToUse = "Link";
         }
+      }
+
+      const normalizedUrl = formUrl.startsWith("http://") || formUrl.startsWith("https://") 
+        ? formUrl 
+        : `https://${formUrl}`;
+
+      let iconToUse: string | undefined = undefined;
+      if (isIconLink) {
+        iconToUse = preview?.logo || "🔗";
       }
 
       const validated = linkSchema.parse({ 
         title: titleToUse, 
-        url: formUrl,
-        icon: isIconLink ? "🔗" : undefined
+        url: normalizedUrl,
+        icon: iconToUse
       });
       await onSubmit({ 
         title: validated.title, 
@@ -236,6 +301,7 @@ export function LinkDialog({
         setFormTitle("");
         setFormUrl("");
         setIsIconLink(false);
+        setPreview(null);
       }
     } catch (error) {
       if (error && typeof error === "object" && "issues" in error) {
@@ -323,15 +389,19 @@ export function LinkDialog({
                         <Input
                           {...props}
                           id="link-url"
-                          type="url"
+                          type="text"
                           value={formUrl}
                           onChange={(e) => {
                             setFormUrl(e.target.value);
                             setUrlError("");
-                            // Clear preview when URL changes
                             setPreview(null);
                           }}
-                          placeholder="https://example.com"
+                          onBlur={() => {
+                            if (formUrl.trim() && !isValidUrl) {
+                              validateUrl(formUrl, true, true);
+                            }
+                          }}
+                          placeholder="example.com or https://example.com"
                           aria-invalid={urlError ? "true" : undefined}
                           disabled={isPending}
                           className={isValidUrl && !urlError ? "pr-10" : ""}
@@ -474,7 +544,15 @@ export function LinkDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isPending}>
+            <Button 
+              type="submit" 
+              disabled={
+                isPending || 
+                !formUrl.trim() || 
+                !isValidUrl || 
+                (!isIconLink && !preview && !initialData)
+              }
+            >
               {isPending
                 ? initialData
                   ? "Saving..."

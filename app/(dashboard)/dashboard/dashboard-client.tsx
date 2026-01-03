@@ -345,6 +345,7 @@ export function DashboardClient({ initialProfile }: DashboardClientProps) {
                                     key={link.id}
                                     link={link}
                                     onEdit={handleIconLinkClick}
+                                    onDelete={handleDeleteClick}
                                     isDeleting={isDeleting}
                                     isToggling={isToggling}
                                   />

@@ -1,6 +1,7 @@
 "use client";
 
 import type * as React from "react";
+import Image from "next/image";
 import type { Link } from "@/lib/hooks/use-links";
 import {
   Tooltip,
@@ -134,10 +135,8 @@ export function IconLink({ link, onClick }: IconLinkProps) {
       rel="noopener noreferrer"
       onClick={handleClick}
       aria-label={tooltipText}
-      className="inline-flex items-center justify-center text-white rounded-xl transition-all hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-100 focus:ring-zinc-400"
+      className="inline-flex items-center justify-center bg-white dark:bg-zinc-100 rounded-xl border border-zinc-200 transition-all hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-100 focus:ring-zinc-400"
       style={{
-        background: colors.bg,
-        border: `1px solid ${colors.border}`,
         width: "44px",
         height: "44px",
       }}
@@ -149,14 +148,34 @@ export function IconLink({ link, onClick }: IconLinkProps) {
           xmlns="http://www.w3.org/2000/svg"
           width="20"
           height="20"
-          fill="currentColor"
+          fill={colors.bg}
           className="shrink-0"
         >
           <title>{linkTitle}</title>
           {svgPath}
         </svg>
+      ) : link.icon && (link.icon.startsWith("http://") || link.icon.startsWith("https://")) ? (
+        <>
+          <Image
+            src={link.icon}
+            alt={linkTitle}
+            width={20}
+            height={20}
+            className="shrink-0 object-contain"
+            unoptimized
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = "none";
+              const fallback = target.nextElementSibling as HTMLElement;
+              if (fallback) {
+                fallback.style.display = "block";
+              }
+            }}
+          />
+          <span className="text-lg leading-none hidden">🔗</span>
+        </>
       ) : (
-        <span className="text-lg leading-none">{link.icon}</span>
+        <span className="text-lg leading-none">{link.icon || "🔗"}</span>
       )}
     </a>
   );

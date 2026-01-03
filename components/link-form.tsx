@@ -81,13 +81,13 @@ export function LinkForm({ onAddLink }: LinkFormProps) {
                   <Input
                     {...props}
                     id="url"
-                    type="url"
+                    type="text"
                     value={url}
                     onChange={(e) => {
                       setUrl(e.target.value);
                       setUrlError("");
                     }}
-                    placeholder="https://example.com"
+                    placeholder="example.com or https://example.com"
                     aria-invalid={urlError ? "true" : undefined}
                     className="w-full"
                   />

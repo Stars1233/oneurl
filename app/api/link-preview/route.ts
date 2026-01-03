@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import validator from "validator";
 import { getFallbackPreviewImage } from "@/lib/utils/link-preview-image";
 
 const BACKEND_URL = process.env.BACKEND_URL || "http://localhost:3001";
@@ -16,17 +17,32 @@ export async function GET(req: Request) {
 
   let validUrl: string;
   try {
-    const urlObj = new URL(url);
-    validUrl = urlObj.toString();
-  } catch {
-    try {
-      validUrl = new URL(`https://${url}`).toString();
-    } catch {
+    const normalizedUrl = url.startsWith("http://") || url.startsWith("https://") 
+      ? url 
+      : `https://${url}`;
+    
+    if (!validator.isURL(normalizedUrl, {
+      protocols: ["http", "https"],
+      require_protocol: false,
+      require_valid_protocol: true,
+      require_host: true,
+      require_port: false,
+      allow_protocol_relative_urls: false,
+      validate_length: true,
+    })) {
       return NextResponse.json(
-        { error: "Invalid URL format" },
+        { error: "Invalid URL format. Please provide a valid URL with a proper domain." },
         { status: 400 }
       );
     }
+    
+    const urlObj = new URL(normalizedUrl);
+    validUrl = urlObj.toString();
+  } catch {
+    return NextResponse.json(
+      { error: "Invalid URL format. Please provide a valid URL with a proper domain." },
+      { status: 400 }
+    );
   }
 
   try {

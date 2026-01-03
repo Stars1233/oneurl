@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import type * as React from "react";
+import Image from "next/image";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import type { Link } from "@/lib/hooks/use-links";
-import { Pencil } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Tooltip,
@@ -17,6 +18,7 @@ import {
 interface SortableDashboardIconLinkProps {
   link: Link;
   onEdit: (link: Link) => void;
+  onDelete?: (id: string) => void;
   isDeleting?: boolean;
   isToggling?: boolean;
 }
@@ -124,6 +126,7 @@ function getSocialIconTitle(url: string): string {
 export function SortableDashboardIconLink({
   link,
   onEdit,
+  onDelete,
   isDeleting = false,
   isToggling = false,
 }: SortableDashboardIconLinkProps) {
@@ -153,6 +156,12 @@ export function SortableDashboardIconLink({
     onEdit(link);
   };
 
+  const handleDeleteClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    onDelete?.(link.id);
+  };
+
   const tooltipText = link.title || linkTitle;
 
   const iconElement = (
@@ -160,10 +169,8 @@ export function SortableDashboardIconLink({
       {...attributes}
       {...listeners}
       aria-label={tooltipText}
-      className="inline-flex items-center justify-center text-white rounded-xl transition-all hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-100 focus:ring-zinc-400 cursor-grab active:cursor-grabbing"
+      className="inline-flex items-center justify-center bg-white dark:bg-zinc-100 rounded-xl border border-zinc-200 transition-all hover:scale-105 active:scale-95 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-100 focus:ring-zinc-400 cursor-grab active:cursor-grabbing"
       style={{
-        background: colors.bg,
-        border: `1px solid ${colors.border}`,
         width: "44px",
         height: "44px",
       }}
@@ -175,14 +182,34 @@ export function SortableDashboardIconLink({
           xmlns="http://www.w3.org/2000/svg"
           width="20"
           height="20"
-          fill="currentColor"
+          fill={colors.bg}
           className="shrink-0 pointer-events-none"
         >
           <title>{linkTitle}</title>
           {svgPath}
         </svg>
+      ) : link.icon && (link.icon.startsWith("http://") || link.icon.startsWith("https://")) ? (
+        <>
+          <Image
+            src={link.icon}
+            alt={linkTitle}
+            width={20}
+            height={20}
+            className="shrink-0 object-contain pointer-events-none"
+            unoptimized
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = "none";
+              const fallback = target.nextElementSibling as HTMLElement;
+              if (fallback) {
+                fallback.style.display = "block";
+              }
+            }}
+          />
+          <span className="text-lg leading-none hidden pointer-events-none">🔗</span>
+        </>
       ) : (
-        <span className="text-lg leading-none pointer-events-none">{link.icon}</span>
+        <span className="text-lg leading-none pointer-events-none">{link.icon || "🔗"}</span>
       )}
     </div>
   );
@@ -201,23 +228,46 @@ export function SortableDashboardIconLink({
           <TooltipPopup>{tooltipText}</TooltipPopup>
         </Tooltip>
         {isHovered && (
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="secondary"
-                  className="absolute -top-1 -right-1 h-5 w-5 p-0 rounded-full shadow-sm z-10"
-                  onClick={handleEditClick}
-                  aria-label={`Edit ${tooltipText}`}
-                >
-                  <Pencil className="h-3 w-3" />
-                </Button> as React.ReactElement
-              }
-            />
-            <TooltipPopup>Edit {tooltipText}</TooltipPopup>
-          </Tooltip>
+          <>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="absolute -top-1 -right-1 h-5 w-5 p-0 rounded-full shadow-sm z-10"
+                    onClick={handleEditClick}
+                    aria-label={`Edit ${tooltipText}`}
+                    disabled={isDeleting || isToggling}
+                  >
+                    <Pencil className="h-3 w-3" />
+                  </Button> as React.ReactElement
+                }
+              />
+              <TooltipPopup>Edit {tooltipText}</TooltipPopup>
+            </Tooltip>
+            {onDelete && (
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="absolute -top-1 -left-1 h-5 w-5 p-0 rounded-full shadow-sm z-10 text-destructive hover:text-destructive hover:bg-destructive/10"
+                      onClick={handleDeleteClick}
+                      aria-label={`Delete ${tooltipText}`}
+                      disabled={isDeleting || isToggling}
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button> as React.ReactElement
+                  }
+                />
+                <TooltipPopup>Delete {tooltipText}</TooltipPopup>
+              </Tooltip>
+            )}
+          </>
         )}
       </div>
     </TooltipProvider>
