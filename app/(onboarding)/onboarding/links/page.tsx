@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,15 +20,44 @@ type LocalLink = {
   isActive?: boolean;
 };
 
+function getInitialLinks(): LocalLink[] {
+  if (typeof window === "undefined") return [];
+  const savedLinks = localStorage.getItem("onboarding-links");
+  if (savedLinks) {
+    try {
+      const parsed = JSON.parse(savedLinks);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    } catch {
+      localStorage.removeItem("onboarding-links");
+    }
+  }
+  return [];
+}
+
 export default function LinksPage() {
   const router = useRouter();
-  const [links, setLinks] = useState<LocalLink[]>([]);
+  const [links, setLinks] = useState<LocalLink[]>(getInitialLinks);
   const [globalError, setGlobalError] = useState("");
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [iconLinkDialogOpen, setIconLinkDialogOpen] = useState(false);
   const [linkToEdit, setLinkToEdit] = useState<Link | null>(null);
   const [iconLinkToEdit, setIconLinkToEdit] = useState<LocalLink | null>(null);
+
+  useEffect(() => {
+    if (links.length > 0) {
+      localStorage.setItem("onboarding-links", JSON.stringify(links));
+    } else {
+      localStorage.removeItem("onboarding-links");
+    }
+
+    const event = new CustomEvent("onboarding-links-changed", {
+      detail: { hasUnsavedLinks: links.length > 0 },
+    });
+    window.dispatchEvent(event);
+  }, [links]);
 
   const handleAddLink = async (data: { title: string; url: string; icon?: string | null }) => {
     const newLink: LocalLink = {
@@ -142,6 +171,10 @@ export default function LinksPage() {
       }
 
       toastSuccess("Links saved", "Your links have been saved successfully");
+      localStorage.removeItem("onboarding-links");
+      window.dispatchEvent(new CustomEvent("onboarding-links-changed", {
+        detail: { hasUnsavedLinks: false },
+      }));
       router.push("/onboarding/preview");
     } catch {
       const errorMessage = "Failed to save links";

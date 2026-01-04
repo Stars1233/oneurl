@@ -1,9 +1,19 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import Image from "next/image";
+import {
+  AlertDialog,
+  AlertDialogPopup,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogClose,
+} from "@/components/ui/alert-dialog";
 
 const steps = [
   { path: "/onboarding/username", label: "Username", step: 1 },
@@ -18,7 +28,130 @@ export default function OnboardingLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const currentStep = steps.findIndex((step) => step.path === pathname);
+  const [hasUnsavedData, setHasUnsavedData] = useState(false);
+  const [isChecking, setIsChecking] = useState(false);
+  const [skipDialogOpen, setSkipDialogOpen] = useState(false);
+  const [hasUnsavedLinks, setHasUnsavedLinks] = useState(false);
+
+  useEffect(() => {
+    const checkUnsavedData = async () => {
+      setIsChecking(true);
+      try {
+        const [profileRes, linksRes] = await Promise.all([
+          fetch("/api/profile").catch(() => null),
+          fetch("/api/links").catch(() => null),
+        ]);
+
+        const profile = profileRes?.ok ? await profileRes.json() : null;
+        const linksData = linksRes?.ok ? await linksRes.json() : { links: [] };
+
+        const hasUsername = !!profile?.username;
+        const hasSavedLinks = (linksData?.links?.length ?? 0) > 0;
+
+        const hasLocalUsername = !!localStorage.getItem("onboarding-username");
+        const localLinks = localStorage.getItem("onboarding-links");
+        let hasLocalLinks = false;
+        if (localLinks) {
+          try {
+            const parsed = JSON.parse(localLinks);
+            hasLocalLinks = Array.isArray(parsed) && parsed.length > 0;
+          } catch {
+            hasLocalLinks = false;
+          }
+        }
+
+        setHasUnsavedData(hasUsername || hasSavedLinks || hasLocalUsername || hasLocalLinks);
+      } catch {
+        const hasLocalUsername = !!localStorage.getItem("onboarding-username");
+        const localLinks = localStorage.getItem("onboarding-links");
+        let hasLocalLinks = false;
+        if (localLinks) {
+          try {
+            const parsed = JSON.parse(localLinks);
+            hasLocalLinks = Array.isArray(parsed) && parsed.length > 0;
+          } catch {
+            hasLocalLinks = false;
+          }
+        }
+        setHasUnsavedData(hasLocalUsername || hasLocalLinks);
+      } finally {
+        setIsChecking(false);
+      }
+    };
+
+    checkUnsavedData();
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleLinksChanged = (event: CustomEvent<{ hasUnsavedLinks: boolean }>) => {
+      setHasUnsavedLinks(event.detail.hasUnsavedLinks);
+    };
+
+    window.addEventListener("onboarding-links-changed", handleLinksChanged as EventListener);
+    return () => {
+      window.removeEventListener("onboarding-links-changed", handleLinksChanged as EventListener);
+    };
+  }, []);
+
+  const handleSkip = async () => {
+    if (hasUnsavedData || hasUnsavedLinks) {
+      setSkipDialogOpen(true);
+    } else {
+      await handleCompleteOnboarding();
+    }
+  };
+
+  const handleCompleteOnboarding = async () => {
+    try {
+      const usernameFromStorage = localStorage.getItem("onboarding-username");
+      const linksFromStorage = localStorage.getItem("onboarding-links");
+      
+      let username: string | undefined;
+      let links: Array<{ title: string; url: string; icon?: string }> | undefined;
+
+      if (usernameFromStorage) {
+        username = usernameFromStorage;
+      }
+
+      if (linksFromStorage) {
+        try {
+          links = JSON.parse(linksFromStorage);
+        } catch {
+          links = undefined;
+        }
+      }
+
+      if (username || (links && links.length > 0)) {
+        const res = await fetch("/api/profile/complete-onboarding", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username, links }),
+        });
+
+        if (res.ok) {
+          localStorage.removeItem("onboarding-username");
+          localStorage.removeItem("onboarding-links");
+        }
+      } else {
+        await fetch("/api/profile/complete-onboarding", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        });
+      }
+
+      router.push("/dashboard");
+    } catch {
+      router.push("/dashboard");
+    }
+  };
+
+  const handleConfirmSkip = async () => {
+    setSkipDialogOpen(false);
+    await handleCompleteOnboarding();
+  };
 
   return (
     <div className="flex min-h-screen flex-col bg-zinc-100">
@@ -34,9 +167,27 @@ export default function OnboardingLayout({
             />
             <h1 className="text-sm font-medium font-mono">OneURL</h1>
           </Link>
-          <Button variant="ghost" size="sm" render={<Link href="/dashboard">Skip for now</Link>}>
-            <Link href="/dashboard">Skip for now</Link>
+          <Button variant="ghost" size="sm" onClick={handleSkip} disabled={isChecking}>
+            Skip for now
           </Button>
+          <AlertDialog open={skipDialogOpen} onOpenChange={setSkipDialogOpen}>
+            <AlertDialogPopup>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Leave onboarding?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  You have unsaved progress. Your username and any links you&apos;ve added will be lost if you leave now. Are you sure you want to continue?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogClose>
+                  <Button variant="outline">Cancel</Button>
+                </AlertDialogClose>
+                <Button variant="destructive" onClick={handleConfirmSkip}>
+                  Leave anyway
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogPopup>
+          </AlertDialog>
         </div>
       </div>
 

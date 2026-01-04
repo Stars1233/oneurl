@@ -64,13 +64,18 @@ export default function UsernamePage() {
   }, []);
 
   useEffect(() => {
-    // Check for claimed username from landing page
     const claimedUsername = localStorage.getItem("claimedUsername");
     if (claimedUsername) {
       setUsername(claimedUsername);
       checkAvailability(claimedUsername);
-      // Clear it so it doesn't persist forever
       localStorage.removeItem("claimedUsername");
+      return;
+    }
+
+    const savedUsername = localStorage.getItem("onboarding-username");
+    if (savedUsername) {
+      setUsername(savedUsername);
+      checkAvailability(savedUsername);
     }
   }, [checkAvailability]);
 
@@ -80,10 +85,12 @@ export default function UsernamePage() {
     }
 
     if (username) {
+      localStorage.setItem("onboarding-username", username);
       debounceTimerRef.current = setTimeout(() => {
         checkAvailability(username);
       }, 500);
     } else {
+      localStorage.removeItem("onboarding-username");
       setIsAvailable(null);
       setError("");
       setIsChecking(false);
@@ -108,6 +115,7 @@ export default function UsernamePage() {
       });
 
       if (res.ok) {
+        localStorage.removeItem("onboarding-username");
         toastSuccess("Username set", `Your username @${username} has been set successfully`);
         router.push("/onboarding/avatar");
       } else {
